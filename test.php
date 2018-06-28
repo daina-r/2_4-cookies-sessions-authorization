@@ -1,30 +1,15 @@
 <?php
-require_once 'core.php';
-if (!isAuthorized()) {
-    location('index');
-}
-if (!empty($_POST['test']) && !empty($_POST['delete'])) {
-    unlink('json_tests/'.$_POST['test']);
-    location('list');
-}
-if (!empty($_POST['right']) && !empty($_POST['answer'])) {
-    image();
-    exit;
-}
-if (!empty($_POST['right']) && empty($_POST['answer'])) {
-    echo '<h3>Вы не заполнили тест!</h3>';
-}
-if (isset($_POST['test'])) {
-    $content = file_get_contents('json_tests/'.$_POST['test']);
+session_start();
+require_once 'functions.php';
+
+if (isset($_POST['question']) && isset($_POST['return'])) {   //<---возврат при отсутствии ответа
+    $_SESSION['test']['question'] = $_POST['question'];
+} elseif (isset($_POST['file'])) {
+    $content = file_get_contents('tests/'.$_POST['file']);  //<---распаковка вариантов ответа
     $test = json_decode($content,true);
-    if(!isset($test[0]['question'])) {
-        header('HTTP/1.1 404 Not Found');
-        echo '<h3>Неправильный формат теста!</h3>';
-        exit;
-    }
-}
-if (isset($_POST['list']) && empty($_POST['test'])) {
-    echo '<h3>Вы не выбрали тест!</h3>';
+    $_SESSION['test'] = $test;
+} elseif (empty($_POST)) {                //<---тест не выбран
+    not_found_404();
 }
 ?>
 
@@ -32,23 +17,23 @@ if (isset($_POST['list']) && empty($_POST['test'])) {
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>test.php</title>
+    <title>Тест</title>
 </head>
 <body>
-<?php if(isset($test[0]['answers'])) { ?>
-    <h3>Заполните тест:</h3>
-    <form action="test.php" method="POST">
+  <?php if(isset($_SESSION['test'])) { ?>
+    <h3>Выберите правильный ответ:</h3>
+    <form action="functions.php" method="POST">
         <fieldset>
-            <legend><?php echo $test[0]['question']; ?></legend>
-            <?php foreach ($test[0]['answers'] as $key => $value) {?>
-                <label><input type="radio" name="answer" value="<?php echo $value; ?>"><?php echo $value; ?></label>
-            <?php } ?>
-        </fieldset><br>
-        <input type="hidden" name="right" value="<?php echo $test[0]['correct']; ?>">
-        <!--<input type="text" name="user" placeholder="Ваше имя"><br><br>-->
-        <input type="reset" value="Очистить">
-        <input type="submit" value="Отправить">
+            <legend><?php echo $_SESSION['test']['question']; ?></legend>
+                <?php foreach ($_SESSION['test']['answers'] as $answer) { ?>    <!---вывод вариантов ответа-->
+                    <label>
+                        <input type="radio" name="answer" value="<?php echo $answer; ?>"><?php echo $answer; ?>
+                    </label>
+                <?php } ?>
+        </fieldset><br />
+        <input type="hidden" name="right" value="<?php echo $test['correct']; ?>">
+        <input type="submit" value="Ответить">
     </form>
-<?php } ?>
+  <?php } ?>
 </body>
 </html>

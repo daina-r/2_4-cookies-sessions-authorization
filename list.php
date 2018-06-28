@@ -1,66 +1,55 @@
 <?php
-require_once 'core.php';
-if (!isAuthorized()) {
-    header('HTTP/1.1 403 Forbidden');
-    echo '<h3>Доступ запрещен!</h3>';
-    exit;
+session_start();
+require_once 'functions.php';
+
+$dir = 'tests';
+$files = array_diff( scandir( $dir), array('..', '.'));
+
+
+if (empty($_SESSION['name'])) {              //<---запрет доступа без регистрации
+    forbidden();
+} elseif ($_SESSION['autorized'] == true) {  //<---доступ по авторизации
+    $autorized = $_SESSION['autorized'];
+    $account = 'администратор';
+} else {
+    $account = 'гость';    //<---доступ по регистрации без авторизации
 }
-if (!empty($_SESSION['login'])) {
-    echo "<h3>Вы вошли как зарегистрированный пользователь!</h3>";
-}
-else {
-    echo "<h3>Вы вошли как гость!</h3>";
-}
-$dir = 'json_tests/';
-$listTest = scandir($dir);
-unset($listTest[0], $listTest[1]);
-foreach ($listTest as $value) {
-    $testList[] = $value;
-}
-if(isset($testList)) {
-    echo '<b>Список файлов в директории:</b>';
-    echo '<br/>';
-    foreach ($testList as $key => $value) {
-        $num = $key + 1;
-        echo "{$num}. {$value}";
-        echo '<br/>';
-    }
-}
-echo '<br/>';
 ?>
 
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>list.php</title>
+    <title>Страница выбора тестов</title>
 </head>
 <body>
-<?php if (!empty($_SESSION['login'])) { ?>
-    <form action="redirect.php" method="POST" enctype="multipart/form-data">
-        <label><b>Добавить тест:</b> <input type="file" name="json"></label>
-        <input type="reset" value="Очистить">
-        <input type="submit" value="Отправить"><br/><br/>
-    </form>
-<?php } ?>
+    <?php echo "<h3>Здравствуйте, ".$_SESSION['name']."! (статус: ".$account.")</h3>";
 
-<?php if(isset($testList)) { ?>
-    <h4>Выбрать тест:</h4>
-    <form action="test.php" method="POST">
-        <fieldset>
-            <legend><?php echo 'Тест №..' ?></legend>
-            <?php foreach ($testList as $key => $value) {?>
-                <label><input type="radio" name="test" value="<?php echo $value; ?>"><?php echo ($key + 1); ?></label>
-            <?php } ?>
-        </fieldset><br>
-        <?php if (!empty($_SESSION['login'])) { ?>
-            <label>Удалить тест! <input type="checkbox" name="delete"></label>
-        <?php } ?>
-        <input type="hidden" name="list">
-        <input type="reset" value="Очистить">
-        <input type="submit" value="Отправить">
-    </form>
-<?php } ?><br><br>
-<a href="index.php"><button>Выход из системы</button></a>
+    if(isset($files)) { ?>          <!---вывод формы выбора теста-->
+        <h3>Выберите тест</h3>
+        <form action="test.php" method="POST" enctype="multipart/form-data">
+            <fieldset>
+                <legend>Тест №..</legend>
+                    <?php foreach ($files as $key => $file) {
+                        $num = $key - 1;
+                        $questio = file_get_contents('tests/'.$file);
+                        $quest = json_decode($questio, true); ?>
+                        <label>
+                            <input type="radio" name="file" value="<?php echo $file; ?>">
+                            <?php echo "$num. "; echo $quest['question']; ?><br />
+                        </label>
+                    <?php } ?>
+            </fieldset><br>
+            <input type="submit" value="Выбрать">
+        </form><br><br>
+    <?php }
+
+    if (isset($autorized)) { ?>                             <!---ссылка на административный раздел-->
+        <a href='admin.php'><button>Управление базой тестов</button></a><br><br>
+    <?php } ?>
+
+        <form action="functions.php" method="POST">         <!---кнопка завершения сессии-->
+            <input type="submit" name="logout" value="Выход из системы">
+        </form>
 </body>
 </html>
